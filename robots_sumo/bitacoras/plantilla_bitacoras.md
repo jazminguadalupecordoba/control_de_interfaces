@@ -2,26 +2,29 @@ NOTA: A medida que se realizan las bitácoras deberán ser subidas al repo corre
 
 # BITÁCORA DE PROYECTO – ROBOT SUMO
 
-## Equipo: _______________________________
-## Nombre del Robot: ______________________
-## Capitán: _______________________________
-## Subcapitán: ____________________________
+## Equipo: Los PITitos
+## Nombre del Robot: FLDSMDFR
+## Capitán: Cordoba Jazmin
+## Subcapitán: Astete Peter
 ## Integrantes:
--
--
+-Argüello Maximo
+-Contreras Victoria
 -
 
 ## REGISTRO DE ACTIVIDADES
 ### Fecha: 
 ### Integrantes presentes:
--
--
--
+-Cordoba Jazmin
+-Astete Peter
+-Contreras Victoria
 
 ### Objetivos de la jornada:
--
--
--
+-Ensamblaje del robot
+-Carga del programa a la raspberry y ensamblaje de cables
+-Plano de la infraestructura
+-investigación sobre conexion a wifi 
+-Investigación sobre materiales
+-Prueba de conexion de la raspberry a los motores
 
 ### Actividades realizadas:
 -
