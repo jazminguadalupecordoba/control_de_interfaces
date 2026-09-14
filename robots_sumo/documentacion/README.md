@@ -545,3 +545,259 @@ Se puede cortar, pegar, lijar y pintar.
 Permite realizar estructuras y formas tridimensionales.
 Es relativamente económico y fácil de conseguir.
 Puede fabricarse artesanalmente utilizando papel, cartón y adhesivos.
+
+
+Conexion WiFi 
+INVESTIGACIÓN 
+Control inalámbrico de un autito robótico mediante Raspberry Pi Pico W 
+ 
+Comunicación Wi-Fi, programación en C, PWM, L298N y aplicación Android 
+ 
+ 
+Proyecto de Electrónica / Robótica 
+Documento de investigación y propuesta de implementación 
+ 
+ Introducción 
+El presente trabajo analiza una posible implementación para controlar de forma inalámbrica un autito robótico mediante una Raspberry Pi Pico W. El objetivo es reemplazar el funcionamiento automático actual del robot por un sistema en el que un teléfono celular Android pueda enviar órdenes a través de una conexión Wi-Fi. La Raspberry Pi Pico W recibirá esas órdenes, las interpretará mediante un programa escrito en C y controlará dos motores de corriente continua utilizando señales PWM y un controlador L298N. 
+La propuesta también contempla conservar el sensor ultrasónico HC-SR04 utilizado para detectar obstáculos. De esta manera, el control manual mediante el celular puede complementarse con una función de seguridad que detenga el robot cuando se detecte un objeto a una distancia determinada. 
+Objetivo 
+Diseñar un sistema de control remoto por Wi-Fi para un autito robótico basado en una Raspberry Pi Pico W, utilizando programación en C mediante el Pico SDK. El sistema deberá permitir que un dispositivo Android envíe órdenes de movimiento a la Pico W, que posteriormente las traduzca en señales de dirección y PWM para controlar los dos motores del vehículo. 
+Componentes del sistema 
+Componente 	Función 	Conexión / observación 
+Raspberry Pi Pico W 	Microcontrolador y unidad de control. Además incorpora Wi-Fi. 	Programa en C mediante Pico SDK. 
+L298N 	Controlador de potencia para los dos motores DC. 	Recibe IN1–IN4 y ENA/ENB. 
+Motor A 	Movimiento de un lado del autito. 	IN1, IN2 y ENA. 
+Motor B 	Movimiento del otro lado del autito. 	IN3, IN4 y ENB. 
+HC-SR04 	Medición de distancia para detectar obstáculos. 	TRIG y ECHO; ECHO debe adaptarse a 3,3 V. 
+Teléfono Android 	Interfaz de control remoto. 	Se comunica por Wi-Fi y puede utilizar una app/APK. 
+Asignación de pines propuesta 
+GPIO Pico W 	Señal 	Función 
+GP2 	IN1 	Dirección Motor A 
+GP3 	IN2 	Dirección Motor A 
+GP4 	ENA 	PWM / velocidad Motor A 
+GP6 	IN3 	Dirección Motor B 
+GP7 	IN4 	Dirección Motor B 
+GP8 	ENB 	PWM / velocidad Motor B 
+GP14 	TRIG 	Disparo HC-SR04 
+GP15 	ECHO 	Entrada HC-SR04, con 
+		adaptación de nivel 
+Funcionamiento general del sistema 
+El sistema puede dividirse en cuatro niveles. En primer lugar, el teléfono Android funciona como control remoto. En segundo lugar, la comunicación Wi-Fi transporta las órdenes. En tercer lugar, la Raspberry Pi Pico W recibe y procesa dichas órdenes. Finalmente, el L298N y los motores convierten las señales eléctricas de la Pico en movimiento. 
+CELULAR ANDROID 
+       │ 
+       │ Wi-Fi / HTTP 
+       ▼ 
+RASPBERRY PI PICO W 
+       │ 
+       ├── Programa en C 
+       │     ├── Comunicación Wi-Fi 
+       │     ├── Interpretación de comandos 
+       │     └── Control de seguridad 
+       │ 
+       ├── GPIO + PWM 
+       ▼ 
+     L298N 
+       │ 
+       ├── Motor A 
+       └── Motor B 
+ 
+HC-SR04 ─────────────► Pico W 
+   (distancia / obstáculos) 
+¿Qué es el PWM y por qué se utiliza? 
+PWM (Pulse Width Modulation o modulación por ancho de pulso) es una técnica que permite controlar la potencia promedio entregada a una carga mediante una señal digital que alterna rápidamente entre un nivel alto y uno bajo. En este proyecto se utiliza para regular la velocidad de los motores. 
+En el código existente se utiliza un rango de 0 a 255. Un valor cercano a 0 representa una señal con muy poca potencia promedio, mientras que 255 representa el máximo establecido por el programa. El valor no debe interpretarse necesariamente como una velocidad exacta en centímetros por segundo, ya que la velocidad real depende también del motor, la alimentación, el peso y la superficie. 
+Función del L298N 
+El L298N es un controlador de motores que permite manejar dos motores DC. La Raspberry Pi Pico W no debe alimentar directamente los motores desde sus GPIO. En cambio, los GPIO proporcionan señales de control al L298N, mientras que el controlador utiliza una alimentación apropiada para los motores. 
+Para cada motor se utilizan dos señales de dirección y una señal de habilitación. IN1/IN2 controlan el sentido del Motor A y ENA recibe el PWM. IN3/IN4 realizan la misma función para el Motor B y ENB recibe su PWM. 
+Comunicación Wi-Fi 
+La Raspberry Pi Pico W incorpora conectividad inalámbrica, por lo que no necesita un módulo Wi-Fi externo. Para la implementación en C se puede utilizar el soporte de Wi-Fi del Pico SDK junto con la pila de protocolos lwIP. 
+Para simplificar la primera versión del proyecto se propone que la Pico W se conecte a una red Wi-Fi existente (modo estación) y ejecute un pequeño servidor HTTP. El celular se conecta a la misma red y envía solicitudes a la dirección IP de la Pico W. 
+Ejemplo conceptual: 
+ 
+Teléfono 
+   │ 
+   │  GET /adelante 
+   ▼ 
+Wi-Fi 
+   │ 
+   ▼ 
+Pico W (servidor) 
+   │ 
+   ├── /adelante  → ambos motores hacia adelante 
+   ├── /atras     → ambos motores hacia atrás 
+   ├── /izquierda → giro 
+   ├── /derecha   → giro 
+   └── /stop      → detener 
+Esta arquitectura tiene la ventaja de separar claramente la interfaz del celular del control físico del robot. El APK no se instala en la Pico W: el APK pertenece al teléfono. La Pico W ejecuta su propio firmware en C y recibe las órdenes por la red. 
+Aplicación Android y APK 
+Un APK es el formato de paquete utilizado para distribuir e instalar aplicaciones Android. En este proyecto, la aplicación funcionaría como un control remoto. Puede desarrollarse con una herramienta como MIT App Inventor, que permite diseñar la interfaz y establecer las acciones de los botones sin tener que desarrollar todo el sistema Android desde cero. 
+La condición de utilizar C se mantiene en el firmware de la Raspberry Pi Pico W. Si la consigna específica del docente exige que también la aplicación Android esté programada en C/C++, debe confirmarse antes de elegir la herramienta para generar el APK. Para una primera versión, lo más importante es comprobar la comunicación entre celular y Pico W. 
+Comandos propuestos 
+Botón 	Ruta HTTP 	Acción 
+↑ Adelante 	/adelante 	Ambos motores hacia adelante 
+↓ Atrás 	/atras 	Ambos motores hacia atrás 
+← Izquierda 	/izquierda 	Motor izquierdo reduce o invierte su movimiento 
+→ Derecha 	/derecha 	Motor derecho reduce o invierte su movimiento 
+ 
+■ Stop 	/stop 	Detener ambos motores 
+Sensor ultrasónico HC-SR04 
+El HC-SR04 mide distancia mediante ultrasonido. La Pico W genera un pulso en TRIG y mide el tiempo durante el cual ECHO permanece activo. A partir de ese tiempo se calcula la distancia aproximada. 
+Es importante tener en cuenta que los GPIO de la Pico W trabajan con lógica de 3,3 V. Si el módulo HC-SR04 utilizado entrega aproximadamente 5 V en ECHO, esa señal no debe conectarse directamente al GPIO. Debe utilizarse una adaptación de nivel, por ejemplo un divisor resistivo correctamente calculado. También deben compartir una referencia de GND. 
+Una vez integrado el control manual, el sensor puede actuar como sistema de seguridad. Por ejemplo, si el usuario ordena avanzar y la distancia medida es inferior al límite establecido, el programa puede detener los motores independientemente de la orden del celular. 
+Integración con el código de motores existente 
+El código proporcionado para el proyecto ya contiene las funciones fundamentales para controlar los motores: inicialización del PWM, establecimiento de velocidad, funciones motor_a() y motor_b(), y stop_all(). Por lo tanto, no es necesario reemplazar esa lógica. La modificación principal consiste en agregar la comunicación Wi-Fi y hacer que las funciones de movimiento se ejecuten según el comando recibido. 
+Ejemplo de lógica de control: 
+ if (comando == ADELANTE) {     motor_a(true, 200);     motor_b(true, 200); 
+} else if (comando == ATRAS) {     motor_a(false, 200);     motor_b(false, 200); 
+} else if (comando == STOP) {     stop_all(); 
+} 
+Código de referencia: Pico W + Wi-Fi + motores 
+El siguiente código es una base de integración para un proyecto realizado con Pico SDK. Utiliza el modo estación para conectarse a una red Wi-Fi y un servidor TCP/HTTP sencillo. Se deben reemplazar WIFI_SSID y WIFI_PASSWORD por los datos de la red de prueba. También debe incorporarse el código del sensor HC-SR04 si se desea utilizarlo en la versión final. 
+#include <stdio.h> 
+#include <string.h> 
+#include "pico/stdlib.h" 
+#include "pico/cyw43_arch.h" #include "hardware/pwm.h" #include "lwip/tcp.h" 
+ 
+// ---------------- PINES ---------------- 
+#define IN1 2 
+#define IN2 3 
+#define ENA 4  
+#define IN3 6 
+#define IN4 7 
+#define ENB 8 
+ 
+// ---------------- WIFI ----------------- 
+#define WIFI_SSID     "NOMBRE_DE_RED" 
+#define WIFI_PASSWORD "CONTRASENA" 
+ 
+// Velocidad PWM: 0 a 255 
+#define VELOCIDAD 200 
+ 
+// ------------- CONTROL PWM ------------- void pwm_init_pin(uint pin) {     gpio_set_function(pin, GPIO_FUNC_PWM); 
+     uint slice = pwm_gpio_to_slice_num(pin);     pwm_set_wrap(slice, 255);     pwm_set_chan_level(slice,                        pwm_gpio_to_channel(pin), 0);     pwm_set_enabled(slice, true); 
+}  void set_speed(uint pin, uint8_t speed) {     pwm_set_gpio_level(pin, speed); 
+} 
+ 
+// ------------- CONTROL MOTORES ---------- void motor_a(bool forward, uint8_t speed) {     gpio_put(IN1, forward);     gpio_put(IN2, !forward);     set_speed(ENA, speed); 
+}  void motor_b(bool forward, uint8_t speed) {     gpio_put(IN3, forward);     gpio_put(IN4, !forward);     set_speed(ENB, speed); 
+}  void stop_all(void) {     set_speed(ENA, 0);     set_speed(ENB, 0); 
+} 
+ 
+// ----------- PROCESAMIENTO HTTP --------- void ejecutar_comando(const char *request) { 
+     if (strstr(request, "GET /adelante")) {         motor_a(true, VELOCIDAD);         motor_b(true, VELOCIDAD); 
+    }     else if (strstr(request, "GET /atras")) {         motor_a(false, VELOCIDAD);         motor_b(false, VELOCIDAD); 
+    }     else if (strstr(request, "GET /izquierda")) { 
+        // Giro sobre el lugar.         motor_a(false, VELOCIDAD);         motor_b(true, VELOCIDAD); 
+    }     else if (strstr(request, "GET /derecha")) { 
+        // Giro sobre el lugar.         motor_a(true, VELOCIDAD);         motor_b(false, VELOCIDAD); 
+    }     else if (strstr(request, "GET /stop")) {         stop_all(); 
+    } 
+} 
+ 
+// ----------- SERVIDOR TCP --------------- static err_t tcp_recv_callback(void *arg,                                struct tcp_pcb *tpcb,                                struct pbuf *p,                                err_t err) { 
+     if (!p) {         stop_all();         tcp_close(tpcb);         return ERR_OK; 
+    }      char request[256]; 
+    uint16_t len = p->tot_len; 
+     if (len >= sizeof(request))         len = sizeof(request) - 1; 
+     pbuf_copy_partial(p, request, len, 0);     request[len] = '\0'; 
+     printf("Solicitud: %s\n", request); 
+     ejecutar_comando(request); 
+     const char *response = 
+        "HTTP/1.1 200 OK\r\n" 
+        "Content-Type: text/plain\r\n" 
+        "Connection: close\r\n" 
+        "\r\n" 
+        "OK"; 
+ 
+    tcp_write(tpcb, response, strlen(response),               TCP_WRITE_FLAG_COPY);     tcp_output(tpcb); 
+ 
+    pbuf_free(p);     tcp_close(tpcb);      return ERR_OK; 
+}  static err_t tcp_accept_callback(void *arg,                                  struct tcp_pcb *newpcb, 
+                                 err_t err) { 
+     tcp_recv(newpcb, tcp_recv_callback);     return ERR_OK; 
+}  void iniciar_servidor(void) { 
+     struct tcp_pcb *server = tcp_new(); 
+     if (!server) {         printf("No se pudo crear el servidor\n");         return; 
+    }      if (tcp_bind(server, IP_ADDR_ANY, 80) != ERR_OK) {         printf("No se pudo abrir el puerto 80\n");         tcp_close(server);         return; 
+    }      server = tcp_listen(server);     tcp_accept(server, tcp_accept_callback); 
+     printf("Servidor HTTP iniciado\n"); 
+} 
+ 
+// ---------------- MAIN ------------------ int main(void) { 
+     stdio_init_all();     sleep_ms(2000); 
+ 
+    // Inicializar GPIO de dirección     gpio_init(IN1);     gpio_set_dir(IN1, GPIO_OUT); 
+     gpio_init(IN2);     gpio_set_dir(IN2, GPIO_OUT); 
+     gpio_init(IN3);     gpio_set_dir(IN3, GPIO_OUT); 
+     gpio_init(IN4);     gpio_set_dir(IN4, GPIO_OUT); 
+ 
+    // Inicializar PWM     pwm_init_pin(ENA);     pwm_init_pin(ENB); 
+     stop_all(); 
+ 
+    // Inicializar Wi-Fi     if (cyw43_arch_init()) {         printf("Error al inicializar Wi-Fi\n");         return 1; 
+    }      cyw43_arch_enable_sta_mode(); 
+ 
+    printf("Conectando a Wi-Fi...\n"); 
+ 
+    int result = cyw43_arch_wifi_connect_timeout_ms( 
+        WIFI_SSID, 
+        WIFI_PASSWORD, 
+        CYW43_AUTH_WPA2_AES_PSK, 
+        30000 
+    );      if (result != 0) {         printf("No se pudo conectar. Error: %d\n", result);         cyw43_arch_deinit();         return 1; 
+    }      printf("Wi-Fi conectado\n"); 
+ 
+    // Mostrar la IP obtenida     printf("Servidor listo. Consultar IP desde la consola.\n"); 
+     iniciar_servidor(); 
+     while (true) {         cyw43_arch_poll();         sleep_ms(10); 
+    }      cyw43_arch_deinit();     return 0; 
+} 
+Nota técnica: este código es una base de referencia. En un proyecto real debe verificarse la versión del Pico SDK, la configuración de lwIP y la forma de compilación del proyecto. También conviene mejorar el manejo de conexiones y agregar un mecanismo de seguridad que detenga el robot si se pierde la comunicación durante un tiempo determinado. 
+Configuración básica del proyecto con Pico SDK 
+Para compilar el programa no alcanza con guardar el archivo .c. El proyecto debe estar configurado para utilizar el Pico SDK y la biblioteca de conectividad de la Pico W. Una configuración de CMake de referencia puede ser la siguiente: 
+cmake_minimum_required(VERSION 3.13) 
+ include(pico_sdk_import.cmake) 
+ project(robot_wifi C CXX ASM) 
+ pico_sdk_init() 
+ add_executable(robot_wifi     main.c 
+)  target_link_libraries(robot_wifi     pico_stdlib 
+ 
+    pico_cyw43_arch_lwip_threadsafe_background 
+    hardware_pwm 
+)  pico_enable_stdio_usb(robot_wifi 1) pico_enable_stdio_uart(robot_wifi 0) 
+ pico_add_extra_outputs(robot_wifi) 
+La biblioteca pico_cyw43_arch_lwip_threadsafe_background proporciona la integración de la conectividad Wi-Fi de la Pico W con la pila de red lwIP en un modo apropiado para este tipo de aplicación. Según la versión del SDK y la configuración del proyecto, puede ser necesario ajustar las bibliotecas vinculadas. 
+Plan de pruebas recomendado 
+1.	Probar primero el PWM y el movimiento de cada motor sin Wi-Fi. 
+2.	Comprobar que la Pico W se conecta correctamente a la red Wi-Fi. 
+3.	Leer por la consola serie la información de conexión y la dirección IP. 
+4.	Desde un navegador del celular, probar una ruta sencilla, por ejemplo /stop. 
+5.	Probar /adelante, /atras, /izquierda y /derecha con el robot levantado o en una condición segura. 
+6.	Verificar que el botón STOP detenga inmediatamente ambos motores. 
+7.	Integrar el HC-SR04 y comprobar que un obstáculo pueda generar una detención automática. 
+8.	Recién después diseñar la interfaz definitiva y generar el APK. 
+Consideraciones de seguridad y funcionamiento 
+Los motores no deben alimentarse directamente desde los GPIO de la Pico W. La alimentación de los motores debe realizarse mediante el controlador correspondiente y una fuente adecuada. La Pico W debe compartir GND con el circuito de control para que las señales tengan una referencia común. 
+También se recomienda implementar una condición de parada por pérdida de comunicación. En un vehículo controlado remotamente, no conviene que el último comando de movimiento quede activo indefinidamente si el celular se desconecta. Una solución consiste en utilizar un temporizador o un mecanismo de watchdog de comunicación: si durante un intervalo determinado no llega una orden válida, se ejecuta stop_all(). 
+Ventajas de la solución propuesta 
+•	La Pico W ya posee Wi-Fi integrado, por lo que no requiere un módulo inalámbrico adicional. 
+•	El código de control de motores existente puede reutilizarse. 
+•	El PWM permite modificar la velocidad del robot. 
+•	La comunicación por HTTP es sencilla de probar y comprender durante el desarrollo. 
+•	El control puede realizarse desde Android mediante una aplicación o, durante las pruebas, incluso desde un navegador. 
+•	El HC-SR04 puede mantenerse como sistema de detección de obstáculos. 
+•	La arquitectura separa la interfaz del celular del firmware que controla el hardware. 
+Limitaciones y aspectos a verificar 
+El alcance de Wi-Fi depende del entorno y de la red utilizada. Además, la comunicación HTTP introduce cierta latencia y no está pensada para un control de movimiento de precisión en tiempo real. Para un autito escolar esto puede ser suficiente, pero si se necesita una respuesta extremadamente rápida puede considerarse posteriormente un protocolo más liviano. 
+El código incluido debe probarse con la versión de Pico SDK instalada por el equipo. Las API y opciones de compilación pueden variar entre versiones. Por esta razón, el código se presenta como base de investigación e integración y no como una garantía de compilación idéntica en cualquier instalación. 
+Conclusión 
+La Raspberry Pi Pico W permite implementar un control inalámbrico del autito sin agregar un módulo Wi-Fi externo. La solución propuesta utiliza C y el Pico SDK para que la Pico W se conecte a una red, reciba órdenes mediante HTTP y controle el L298N mediante GPIO y PWM. El teléfono Android actúa como interfaz de usuario y puede utilizar una aplicación distribuida como APK. 
+La estrategia recomendada es desarrollar el sistema progresivamente: primero verificar el control de los motores, luego establecer la comunicación Wi-Fi, después conectar los comandos con las funciones de movimiento, integrar el sensor de proximidad y finalmente desarrollar la aplicación Android. Este orden permite detectar errores por etapas y evita intentar resolver simultáneamente problemas de hardware, programación y comunicación. 
+Fuentes de consulta 
+•	Raspberry Pi Documentation – Raspberry Pi Pico Series: 
+https://www.raspberrypi.com/documentation/microcontrollers/ 
+•	Raspberry Pi Pico SDK Documentation: https://datasheets.raspberrypi.com/pico/raspberrypi-pico-c-sdk.pdf 
+•	Raspberry Pi Pico SDK – ejemplos y documentación oficial: https://github.com/raspberrypi/pico-examples 
+•	lwIP – Lightweight IP stack, documentación oficial: https://www.nongnu.org/lwip/ 
+•	MIT App Inventor – documentación oficial: https://appinventor.mit.edu/ 
+•	STMicroelectronics – L298 datasheet: https://www.st.com/resource/en/datasheet/l298.pdf
